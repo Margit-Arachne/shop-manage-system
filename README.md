@@ -1,6 +1,8 @@
 # shop-manage-system
 基于java-MySQL的超市管理系统
 
+使用图形化数据库软件Navicat
+
 包含功能:
 
 用户账户注册登录
