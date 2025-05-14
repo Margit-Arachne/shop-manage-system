@@ -1,9 +1,12 @@
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
 import java.util.Vector;
+import java.io.File;
+import javax.swing.ImageIcon;
 
 public class MainFrame extends JFrame {
 
@@ -80,8 +83,66 @@ public class MainFrame extends JFrame {
         });
 
         deleteBtn.addActionListener(e -> deleteFruit());
+        //
+        table.setRowHeight(80); // 行高足够显示图片
+        table.getColumnModel().getColumn(4).setPreferredWidth(100); // 图片列设置合适宽度
+        // 设置封面列的渲染器，使其显示图片而不是 ImageIcon 的 toString
+        table.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                                                           boolean isSelected, boolean hasFocus, int row, int column) {
+                if (value instanceof ImageIcon) {
+                    return new JLabel((ImageIcon) value);
+                } else {
+                    return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                }
+            }
+        });
     }
 
+    private void loadFruits(String keyword) {
+        try (Connection conn = DBUtil.getConnection()) {
+            model.setRowCount(0); // 清空原有数据
+            String sql = "SELECT * FROM fruits WHERE name LIKE ?";
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ps.setString(1, "%" + keyword + "%");
+            ResultSet rs = ps.executeQuery();
+
+            int index = 1;
+            while (rs.next()) {
+                Vector<Object> row = new Vector<>();
+                row.add(index++);
+                row.add(rs.getString("name"));
+                row.add(rs.getDouble("price"));
+                row.add(rs.getString("unit"));
+
+                // 图片处理
+                String imagePath = rs.getString("image_path");
+                ImageIcon icon = null;
+                if (imagePath != null && !imagePath.isEmpty()) {
+                    File file = new File(imagePath);
+                    if (file.exists()) {
+                        ImageIcon rawIcon = new ImageIcon(imagePath);
+                        Image scaled = rawIcon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
+                        icon = new ImageIcon(scaled);
+                    } else {
+                        icon = new ImageIcon(); // 空图标避免null
+                    }
+                } else {
+                    icon = new ImageIcon(); // 空图标
+                }
+                row.add(icon);
+
+                model.addRow(row);
+            }
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "查询失败：" + e.getMessage());
+        }
+    }
+
+
+/*
     private void loadFruits(String keyword) {
         try (Connection conn = DBUtil.getConnection()) {
             model.setRowCount(0); // 清空原有数据
@@ -106,6 +167,8 @@ public class MainFrame extends JFrame {
             JOptionPane.showMessageDialog(this, "查询失败：" + e.getMessage());
         }
     }
+
+ */
 
     private void editFruit() {
         int row = table.getSelectedRow();
